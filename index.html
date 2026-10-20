@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SocketScope</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b0d12;
+      --panel: #12151d;
+      --panel2: #181c26;
+      --border: #292e3b;
+      --text: #e8ebf3;
+      --muted: #8991a4;
+      --accent: #8b7cff;
+      --green: #4ade80;
+      --red: #fb7185;
+      --yellow: #fbbf24;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 14px/1.5 Inter, system-ui, sans-serif;
+    }
+
+    button, input, textarea, select {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 13px;
+      color: var(--text);
+      background: var(--panel2);
+    }
+
+    button:hover { border-color: var(--accent); }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+
+    input, textarea, select {
+      width: 100%;
+      padding: 10px 11px;
+      color: var(--text);
+      background: #0d1017;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      outline: none;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--accent);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+      font-family: ui-monospace, monospace;
+    }
+
+    .topbar {
+      height: 66px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 0 24px;
+      border-bottom: 1px solid var(--border);
+      background: #0e1016;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      font-size: 17px;
+      font-weight: 750;
+    }
+
+    .logo {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      color: white;
+      background: linear-gradient(135deg, #8b7cff, #5d4fe3);
+      border-radius: 10px;
+      font-size: 18px;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #697080;
+    }
+
+    .dot.connected {
+      background: var(--green);
+      box-shadow: 0 0 10px #4ade8055;
+    }
+
+    main {
+      max-width: 1500px;
+      margin: auto;
+      padding: 24px;
+    }
+
+    .page-heading {
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      margin: 0 0 5px;
+      font-size: 25px;
+      letter-spacing: -.7px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 650;
+    }
+
+    p { margin: 0; }
+
+    .muted { color: var(--muted); }
+
+    .connection-panel {
+      padding: 18px;
+      margin-bottom: 18px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--panel);
+    }
+
+    .connection-row {
+      display: grid;
+      grid-template-columns: minmax(200px, 1fr) auto auto;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .field-label {
+      display: block;
+      margin-bottom: 7px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .primary {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+      font-weight: 650;
+    }
+
+    .danger {
+      color: var(--red);
+    }
+
+    .header-section {
+      margin-top: 18px;
+      padding-top: 17px;
+      border-top: 1px solid var(--border);
+    }
+
+    .section-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .header-row {
+      display: grid;
+      grid-template-columns: minmax(120px, .8fr) minmax(160px, 1.2fr) auto;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .notice {
+      margin-top: 12px;
+      padding: 11px 12px;
+      color: #f5d58a;
+      background: #fbbf2410;
+      border: 1px solid #fbbf2433;
+      border-radius: 8px;
+      font-size: 12px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .stat-card {
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--panel);
+    }
+
+    .stat-label {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .stat-value {
+      margin-top: 5px;
+      font-size: 24px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(300px, .75fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--panel);
+    }
+
+    .panel-header {
+      min-height: 56px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .panel-body { padding: 16px; }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .toolbar select {
+      width: auto;
+      min-width: 120px;
+      padding: 7px 9px;
+    }
+
+    .log-list {
+      max-height: 450px;
+      min-height: 260px;
+      overflow-y: auto;
+    }
+
+    .log-entry {
+      display: grid;
+      grid-template-columns: 72px 78px minmax(0, 1fr);
+      gap: 10px;
+      align-items: start;
+      padding: 12px 14px;
+      border-bottom: 1px solid #242834;
+      cursor: pointer;
+    }
+
+    .log-entry:hover, .log-entry.selected {
+      background: #8b7cff12;
+    }
+
+    .log-time {
+      color: var(--muted);
+      font: 11px ui-monospace, monospace;
+    }
+
+    .tag {
+      display: inline-block;
+      width: fit-content;
+      padding: 3px 6px;
+      border-radius: 5px;
+      font-size: 10px;
+      font-weight: 750;
+      text-transform: uppercase;
+    }
+
+    .tag.received { color: #6ee7a0; background: #4ade8015; }
+    .tag.sent { color: #b3a8ff; background: #8b7cff20; }
+    .tag.event { color: #fbbf24; background: #fbbf2415; }
+    .tag.error { color: #fb7185; background: #fb718515; }
+
+    .log-preview {
+      overflow: hidden;
+      color: #c5cada;
+      font: 12px/1.5 ui-monospace, monospace;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .empty {
+      display: grid;
+      min-height: 240px;
+      place-items: center;
+      padding: 24px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .payload {
+      min-height: 170px;
+      max-height: 320px;
+      overflow: auto;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #0b0d12;
+      color: #cbd0df;
+      font: 12px/1.6 ui-monospace, monospace;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .subheading {
+      margin-bottom: 10px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .send-area { margin-top: 18px; }
+
+    .send-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .checkbox-row input {
+      width: auto;
+    }
+
+    .footer {
+      margin-top: 20px;
+      color: var(--muted);
+      font-size: 11px;
+      text-align: center;
+    }
+
+    @media (max-width: 850px) {
+      main { padding: 15px; }
+      .workspace { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .connection-row { grid-template-columns: 1fr 1fr; }
+      .connection-row input { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 500px) {
+      .topbar { padding: 0 14px; }
+      .connection-row { grid-template-columns: 1fr; }
+      .connection-row input { grid-column: auto; }
+      .header-row { grid-template-columns: 1fr; }
+      .log-entry { grid-template-columns: 55px 65px minmax(0, 1fr); gap: 6px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">↔</div>
+      SocketScope
+    </div>
+    <div class="status">
+      <span id="statusDot" class="dot"></span>
+      <span id="statusText">Disconnected</span>
+    </div>
+  </header>
+
+  <main>
+    <div class="page-heading">
+      <h1>WebSocket Inspector</h1>
+      <p class="muted">Connect to a WebSocket endpoint and inspect messages in real time.</p>
+    </div>
+
+    <section class="connection-panel">
+      <h2>Connection</h2>
+
+      <div class="connection-row">
+        <input
+          id="wsUrl"
+          type="text"
+          placeholder="wss://example.com/socket"
+          autocomplete="url"
+          spellcheck="false"
+        >
+        <button id="connectBtn" class="primary">Connect</button>
+        <button id="disconnectBtn" disabled>Disconnect</button>
+      </div>
+
+      <div class="header-section">
+        <div class="section-heading">
+          <h2>Custom handshake headers</h2>
+          <button id="addHeaderBtn">+ Add header</button>
+        </div>
+
+        <div id="headersContainer"></div>
+
+        <div class="notice">
+          Browser limitation: this single-file app uses the native WebSocket API,
+          which does not allow custom handshake headers. These fields are saved
+          in the UI for reference but are not sent with the connection.
+          Sending actual custom headers requires a backend or a non-browser client.
+        </div>
+      </div>
+
+      <div class="header-section">
+        <label class="field-label" for="protocols">
+          Subprotocols (optional, comma-separated)
+        </label>
+        <input
+          id="protocols"
+          type="text"
+          placeholder="e.g. graphql-transport-ws"
+          spellcheck="false"
+        >
+      </div>
+    </section>
+
+    <section class="stats">
+      <div class="stat-card">
+        <div class="stat-label">Received messages</div>
+        <div class="stat-value" id="receivedCount">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Sent messages</div>
+        <div class="stat-value" id="sentCount">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Events</div>
+        <div class="stat-value" id="eventCount">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Connection time</div>
+        <div class="stat-value" id="connectionTime">00:00</div>
+      </div>
+    </section>
+
+    <div class="workspace">
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Message log</h2>
+          <div class="toolbar">
+            <select id="logFilter" aria-label="Filter messages">
+              <option value="all">All messages</option>
+              <option value="received">Received</option>
+              <option value="sent">Sent</option>
+              <option value="event">Events</option>
+              <option value="error">Errors</option>
+            </select>
+            <button id="exportBtn">Export JSON</button>
+            <button id="clearBtn">Clear</button>
+          </div>
+        </div>
+        <div id="logList" class="log-list">
+          <div class="empty">Connect to a WebSocket to start inspecting messages.</div>
+        </div>
+      </section>
+
+      <div>
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Message details</h2>
+            <button id="copyBtn" disabled>Copy payload</button>
+          </div>
+          <div class="panel-body">
+            <div class="subheading">Selected message</div>
+            <div id="payload" class="payload">Select a message from the log to view its full payload.</div>
+            <div id="messageMeta" class="muted" style="margin-top: 10px; font-size: 11px;">
+              No message selected
+            </div>
+          </div>
+        </section>
+
+        <section class="panel send-area">
+          <div class="panel-header">
+            <h2>Send message</h2>
+          </div>
+          <div class="panel-body">
+            <label class="field-label" for="messageInput">Payload</label>
+            <textarea
+              id="messageInput"
+              placeholder='Type a message or JSON, e.g. {"type":"ping"}'
+              spellcheck="false"
+            ></textarea>
+
+            <div class="send-actions">
+              <label class="checkbox-row">
+                <input type="checkbox" id="formatJson">
+                Validate JSON
+              </label>
+              <button id="sendBtn" class="primary" disabled>Send message ↗</button>
+            </div>
+            <p id="sendHint" class="muted" style="margin-top: 10px; font-size: 11px;">
+              Connect before sending a message.
+            </p>
+          </div>
+        </section>
+
+        <section class="panel send-area">
+          <div class="panel-header">
+            <h2>Recent endpoints</h2>
+            <button id="clearHistoryBtn">Clear history</button>
+          </div>
+          <div id="historyList" class="panel-body">
+            <p class="muted">Your recent endpoints will appear here.</p>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div class="footer">
+      SocketScope · Browser-based WebSocket inspector · No data is sent to a SocketScope server
+    </div>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    let socket = null;
+    let logs = [];
+    let selectedLogId = null;
+    let nextLogId = 1;
+    let connectionStartedAt = null;
+    let connectionTimer = null;
+    let recentEndpoints = [];
+
+    const counters = {
+      received: 0,
+      sent: 0,
+      event: 0
+    };
+
+    const headersContainer = $("headersContainer");
+
+    function addHeaderRow(name = "", value = "") {
+      const row = document.createElement("div");
+      row.className = "header-row";
+
+      const nameInput = document.createElement("input");
+      nameInput.placeholder = "Header name";
+      nameInput.value = name;
+      nameInput.setAttribute("aria-label", "Header name");
+
+      const valueInput = document.createElement("input");
+      valueInput.placeholder = "Header value";
+      valueInput.value = value;
+      valueInput.setAttribute("aria-label", "Header value");
+
+      const removeBtn = document.createElement("button");
+      removeBtn.textContent = "Remove";
+      removeBtn.className = "danger";
+      removeBtn.type = "button";
+      removeBtn.addEventListener("click", () => row.remove());
+
+      row.append(nameInput, valueInput, removeBtn);
+      headersContainer.appendChild(row);
+    }
+
+    $("addHeaderBtn").addEventListener("click", () => addHeaderRow());
+
+    function getDraftHeaders() {
+      return [...headersContainer.querySelectorAll(".header-row")]
+        .map((row) => {
+          const inputs = row.querySelectorAll("input");
+          return {
+            name: inputs[0].value.trim(),
+            value: inputs[1].value
+          };
+        })
+        .filter((header) => header.name || header.value);
+    }
+
+    function updateStatus(connected, text) {
+      $("statusDot").classList.toggle("connected", connected);
+      $("statusText").textContent = text;
+      $("connectBtn").disabled = connected;
+      $("disconnectBtn").disabled = !socket;
+      $("sendBtn").disabled = !connected;
+      $("sendHint").textContent = connected
+        ? "Message will be sent through the active WebSocket connection."
+        : "Connect before sending a message.";
+    }
+
+    function formatTime(date = new Date()) {
+      return date.toLocaleTimeString([], {
+        hour12: false,
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit"
+      });
+    }
+
+    function updateCounters() {
+      $("receivedCount").textContent = counters.received;
+      $("sentCount").textContent = counters.sent;
+      $("eventCount").textContent = counters.event;
+    }
+
+    function addLog(type, data, extra = {}) {
+      const entry = {
+        id: nextLogId++,
+        type,
+        data,
+        time: new Date().toISOString(),
+        ...extra
+      };
+
+      logs.push(entry);
+      counters[type] = (counters[type] || 0) + 1;
+      updateCounters();
+      renderLogs();
+      selectLog(entry.id);
+
+      return entry;
+    }
+
+    function previewData(data) {
+      if (typeof data === "string") return data;
+      try {
+        return JSON.stringify(data);
+      } catch {
+        return String(data);
+      }
+    }
+
+    function renderLogs() {
+      const list = $("logList");
+      const filter = $("logFilter").value;
+      const filtered = logs.filter((entry) => filter === "all" || entry.type === filter);
+
+      list.innerHTML = "";
+
+      if (filtered.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = logs.length
+          ? "No messages match this filter."
+          : "No messages yet. Connect and send or receive a message.";
+        list.appendChild(empty);
+        return;
+      }
+
+      for (const entry of [...filtered].reverse()) {
+        const row = document.createElement("div");
+        row.className = "log-entry";
+        if (entry.id === selectedLogId) row.classList.add("selected");
+
+        const time = document.createElement("div");
+        time.className = "log-time";
+        time.textContent = new Date(entry.time).toLocaleTimeString([], {
+          hour12: false,
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit"
+        });
+
+        const tag = document.createElement("span");
+        tag.className = `tag ${entry.type}`;
+        tag.textContent = entry.type;
+
+        const preview = document.createElement("div");
+        preview.className = "log-preview";
+        preview.textContent = previewData(entry.data);
+
+        row.append(time, tag, preview);
+        row.addEventListener("click", () => selectLog(entry.id));
+        list.appendChild(row);
+      }
+    }
+
+    function selectLog(id) {
+      selectedLogId = id;
+      const entry = logs.find((item) => item.id === id);
+
+      $("copyBtn").disabled = !entry;
+
+      if (!entry) {
+        $("payload").textContent = "Select a message from the log to view its full payload.";
+        $("messageMeta").textContent = "No message selected";
+        renderLogs();
+        return;
+      }
+
+      let display = previewData(entry.data);
+
+      try {
+        display = JSON.stringify(JSON.parse(display), null, 2);
+      } catch {
+        // Keep non-JSON payloads as plain text.
+      }
+
+      $("payload").textContent = display;
+      $("messageMeta").textContent =
+        `${entry.type.toUpperCase()} · ${new Date(entry.time).toLocaleString()}` +
+        (entry.eventName ? ` · ${entry.eventName}` : "");
+
+      renderLogs();
+    }
+
+    function saveEndpoint(url) {
+      recentEndpoints = [
+        url,
+        ...recentEndpoints.filter((item) => item !== url)
+      ].slice(0, 8);
+
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const list = $("historyList");
+      list.innerHTML = "";
+
+      if (!recentEndpoints.length) {
+        const p = document.createElement("p");
+        p.className = "muted";
+        p.textContent = "Your recent endpoints will appear here.";
+        list.appendChild(p);
+        return;
+      }
+
+      for (const endpoint of recentEndpoints) {
+        const row = document.createElement("div");
+        row.style.display = "flex";
+        row.style.alignItems = "center";
+        row.style.gap = "8px";
+        row.style.marginBottom = "8px";
+
+        const url = document.createElement("button");
+        url.style.flex = "1";
+        url.style.textAlign = "left";
+        url.style.overflow = "hidden";
+        url.style.textOverflow = "ellipsis";
+        url.style.whiteSpace = "nowrap";
+        url.textContent = endpoint;
+        url.title = endpoint;
+        url.addEventListener("click", () => {
+          $("wsUrl").value = en
